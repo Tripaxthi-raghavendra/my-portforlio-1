@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contact | Developer Portfolio</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -25,6 +31,15 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            overflow-x: hidden;
+        }
+
+        #hero-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            pointer-events: none;
         }
 
         .contact-card {
@@ -35,10 +50,12 @@
             max-width: 450px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 10;
         }
 
-        h2 { font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--accent); }
-        p { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
+        h2 { font-size: 1.8rem; margin-bottom: 0.5rem; color: var(--accent); text-align: center; }
+        p { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; text-align: center; }
 
         .input-group { margin-bottom: 1.2rem; position: relative; }
 
@@ -100,14 +117,16 @@
 </head>
 <body>
 
-<div class="contact-card">
+<canvas id="hero-canvas"></canvas>
+
+<div class="contact-card reveal">
     <h2>WELCOME TO VASU MEHTA'S PORTFOLIO</h2>
-    <p>ALWAYS IN HELP.</p>
+    <p>ALWAYS IN HELP 🦅.</p>
 
     <form id="portfolioForm">
         <div class="input-group">
             <label for="name">Name</label>
-            <input type="text" id="name" placeholder="DONALD TRUMP" required>
+            <input type="text" id="name" placeholder="VASU" required>
         </div>
 
         <div class="input-group">
@@ -125,39 +144,108 @@
     </form>
 </div>
 
-
 <script>
-  // 1. Initialize the Supabase client
-  const SUPABASE_URL = 'https://dqbpnlnkwcceyjquzbhn.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxYnBubG5rd2NjZXlqcXV6YmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTUzNzAsImV4cCI6MjA4NzU3MTM3MH0.kUZu5eqHlMD71fVe9EBumSoN7JbVxfTUOimUvAbinNM';
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Supabase Initialization
+    const supabaseUrl = "https://dqbpnlnkwcceyjquzbhn.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxYnBubG5rd2NjZXlqcXV6YmhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTUzNzAsImV4cCI6MjA4NzU3MTM3MH0.kUZu5eqHlMD71fVe9EBumSoN7JbVxfTUOimUvAbinNM";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-  async function setSupabaseBackground() {
-    const bucketName = 'feedback';
-    const filePath = 'folder/image.jpg'; // Path to the file inside your bucket
+    // Feedback Form Handler
+    document.getElementById("portfolioForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const status = document.getElementById("status");
+        const submitButton = document.getElementById("submitBtn");
+        
+        status.innerText = "Submitting...";
+        status.style.color = "#fff";
+        submitButton.disabled = true;
 
-    // 2. Get the public URL for the image
-    const { data } = supabase
-      .storage
-      .from(bucketName)
-      .getPublicUrl(filePath);
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const message = document.getElementById("message").value.trim();
 
-    const imageUrl = data.publicUrl;
+        try {
+            const { data, error } = await supabaseClient
+                .from("feedback")
+                .insert([{ name, email, message }]);
 
-    // 3. Apply the URL to the body background
-    if (imageUrl) {
-      document.body.style.backgroundImage = `url('${imageUrl}')`;
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
-      document.body.style.backgroundRepeat = 'no-repeat';
-      document.body.style.backgroundAttachment = 'fixed';
-    }
-  }
+            if (error) {
+                status.innerText = `❌ Error: ${error.message}`;
+                status.style.color = "#ff4444";
+            } else {
+                status.innerText = "✅ Feedback submitted successfully!";
+                status.style.color = "#00ffd5";
+                e.target.reset();
+                setTimeout(() => { status.innerText = ""; }, 5000);
+            }
+        } catch (err) {
+            status.innerText = "❌ Connection error. Please try again.";
+            status.style.color = "#ff4444";
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 
-  // Run the function when the page loads
-  window.onload = setSupabaseBackground;
+    // 3D Background Logic
+    const init3D = () => {
+        const canvas = document.querySelector('#hero-canvas');
+        if (!canvas) return;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const particlesGeometry = new THREE.BufferGeometry();
+        const count = 3500;
+        const positions = new Float32Array(count * 3);
+        for(let i = 0; i < count * 3; i++) { positions[i] = (Math.random() - 0.5) * 12; }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const particlesMaterial = new THREE.PointsMaterial({ size: 0.012, color: 0x38bdf8, transparent: true, opacity: 0.7 });
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particles);
+        camera.position.z = 4;
+
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) - 0.5;
+            mouseY = (e.clientY / window.innerHeight) - 0.5;
+        });
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+            particles.rotation.y += 0.001;
+            particles.position.x += (mouseX * 0.4 - particles.position.x) * 0.05;
+            particles.position.y += (-mouseY * 0.4 - particles.position.y) * 0.05;
+            renderer.render(scene, camera);
+        };
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    };
+
+    // Scroll and UI Logic
+    const initLogic = () => {
+        gsap.registerPlugin(ScrollTrigger);
+        gsap.utils.toArray('.reveal').forEach(elem => {
+            gsap.fromTo(elem, { opacity: 0, y: 30 }, { 
+                opacity: 1, y: 0, duration: 1, ease: "power2.out",
+                scrollTrigger: { trigger: elem, start: "top 85%" }
+            });
+        });
+    };
+
+    window.onload = () => {
+        init3D();
+        initLogic();
+    };
 </script>
-
 </body>
-
 </html>
+
